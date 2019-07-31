@@ -1,1 +1,1 @@
-FROM sociomantictsunami/develbase:v7
+FROM sociomantictsunami/develbase:v7-test
