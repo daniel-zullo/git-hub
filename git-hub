@@ -1476,6 +1476,10 @@ class PullCmd (IssueCmd):
                 action='store_true', default=False,
                 help="force the push git operation (use with "
                 "care!)")
+            parser.add_argument('-d', '--draft',
+                action='store_true', default=False,
+                help="create a draft pull request")
+
         @classmethod
         def run(cls, parser, args):
             head_ref, head_name, remote_head, base, gh_head = \
@@ -1490,7 +1494,7 @@ class PullCmd (IssueCmd):
             infof("Creating pull request from branch {} to {}:{}",
                     remote_head, config.upstream, base)
             pull = req.post(cls.url(), head=gh_head, base=base,
-                    title=title, body=body)
+                    title=title, body=body, draft=args.draft)
             IssueCmd.UpdateCmd._do_update(pull['number'], args.labels,
                     args.assignee, args.milestone)
             cls.print_issue_summary(pull)
