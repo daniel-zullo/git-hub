@@ -1432,6 +1432,20 @@ class PullUtil (IssueUtil):
         infof('Fetching {} from {}', ref, url)
         git_quiet(1, 'fetch', '--', url, ref)
 
+    # Join the template information to the body of the pull request.
+    @classmethod
+    def join_template(cls, body):
+        fname = os.path.join(git_dir(), 'PULL_REQUEST_TEMPLATE.md')
+        if os.path.exists(fname):
+            try:
+                file = open(fname, "r")
+                template = file.read()
+                return template + "\n\n" + body
+            except EnvironmentError as e:
+                die("Error reading pull request template information "
+                    "file '{}': {}", fname, e)
+        return body
+
 # `git hub pull` command implementation
 class PullCmd (IssueCmd):
 
@@ -1515,6 +1529,7 @@ class PullCmd (IssueCmd):
                 msg = cls.editor(cls.get_default_branch_msg(
                         head_ref, head_name))
             (title, body) = split_titled_message(msg)
+            body = cls.join_template(body)
             cls.push(head_name or head_ref, remote_head,
                     force=args.force_push)
             infof("Creating pull request from branch {} to {}:{}",
