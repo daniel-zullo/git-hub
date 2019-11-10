@@ -309,6 +309,9 @@ def git_config(name, default=None, prefix=GIT_CONFIG_PREFIX, value=None, opts=()
 def git_dir():
     return git('rev-parse', '--git-dir')
 
+# Returns the absolute path of the top-level directory
+def git_toplevel_dir():
+    return git('rev-parse', '--show-toplevel')
 
 # Invokes the editor defined by git var GIT_EDITOR.
 #
@@ -1113,6 +1116,24 @@ class IssueUtil (object):
         comment = req.post(url, body=body)
         cls.print_comment(comment)
 
+    # Add the first template found to the body
+    @classmethod
+    def add_template(cls, body, templates):
+        if not templates:
+            return body
+        directories = [git_toplevel_dir(),
+                os.path.join(git_toplevel_dir(), '.github'), git_dir()]
+        for d, f in [(d, f) for d in directories for f in templates]:
+            path = os.path.join(d, f)
+            if os.path.exists(path):
+                try:
+                    file = open(path, "r")
+                    template = file.read()
+                    return template + "\n\n" + body
+                except EnvironmentError as e:
+                    die("Error reading template from path '{}': {}", path, e)
+        return body
+
 # `git hub issue` command implementation
 class IssueCmd (CmdGroup):
 
@@ -1202,10 +1223,16 @@ class IssueCmd (CmdGroup):
             parser.add_argument('-M', '--milestone', metavar='ID', type=int,
                     help="assign the milestone identified by the "
                     "number ID to the %s" % cls.name)
+            parser.add_argument('--template',
+                    action='store_true', default=False,
+                    help="Add the issue template to the body")
         @classmethod
         def run(cls, parser, args):
             msg = args.message or cls.editor()
             (title, body) = split_titled_message(msg)
+            if args.template:
+                templates = ['ISSUE_TEMPLATE', 'ISSUE_TEMPLATE.md']
+                body = cls.add_template(body, templates)
             issue = req.post(cls.url(), title=title, body=body,
                     assignee=args.assignee, labels=args.labels,
                     milestone=args.milestone)
@@ -1507,6 +1534,10 @@ class PullCmd (IssueCmd):
                 msg = cls.editor(cls.get_default_branch_msg(
                         head_ref, head_name))
             (title, body) = split_titled_message(msg)
+            if args.template:
+                templates = ['PULL_REQUEST_TEMPLATE',
+                        'PULL_REQUEST_TEMPLATE.md']
+                body = cls.add_template(body, templates)
             cls.push(head_name or head_ref, remote_head,
                     force=args.force_push)
             infof("Creating pull request from branch {} to {}:{}",
