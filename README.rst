@@ -2,9 +2,11 @@
 A Git command line interface to GitHub
 ======================================
 
+
 .. contents::
    :depth: 1
    :local:
+
 
 
 Description
